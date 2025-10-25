@@ -6,10 +6,14 @@ This repository provides a **starter implementation of Stein Variational Model P
 
 ## Features
 
-- **JAX-based implementation** allowing fast, differentiable, and GPU-accelerated computation.  
+- **JAX-based implementation** allowing fast, differentiable, and GPU-accelerated computation.
+- **Stein variational gradient descent (SVGD)** on the control inputs of robots for trajectory optimization.
+- **Double-integrator** robot dynamics with obstacle and inter-agent collision avoidance.
 - **Modular design** separating configuration, kernel definition, log probability, and visualization.  
 - **Visualization utilities** for robot trajectories, goal locations, and obstacle fields.  
 - **Easily extensible** to different kernels, log-probability functions, or dynamic environments.
+
+
 
 ## Project Structure
 
