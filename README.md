@@ -1,6 +1,6 @@
 # Stein Variational Model Predictive Control (SV-MPC) for Robot Navigation (JAX Implementation)
 
-This repository provides a **starter implementation of Stein Variational Model Predictive Control (SV-MPC)** shown in this [paper](https://homes.cs.washington.edu/~bboots/files/SVMPC.pdf) using **JAX**, applied to a **multi-robot navigation problem** . Robots are initialized at random positions and iteratively update their states using SVGD to reach target locations while avoiding obstacles.  
+This repository provides a **starter implementation of Stein Variational Model Predictive Control (SV-MPC)** shown in this [paper](https://homes.cs.washington.edu/~bboots/files/SVMPC.pdf) using **JAX**, applied to a **multi-robot navigation problem**. Robots are initialized at random positions and iteratively update their states using SVGD to reach target locations while avoiding obstacles and each other.  
 
 ---
 
