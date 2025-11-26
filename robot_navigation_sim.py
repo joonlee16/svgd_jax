@@ -18,8 +18,8 @@ def double_integrator_rollout(x0,u, dt = DT):
         def step_fn(x, ui):
             px, py, vx, vy = x
             ax, ay = ui
-            px_next = px + vx * dt
-            py_next = py + vy * dt
+            px_next = px + vx * dt + 1/2*ax*dt**2
+            py_next = py + vy * dt + 1/2*ay*dt**2
             vx_next = vx + ax * dt
             vy_next = vy + ay * dt
             x_next = jnp.array([px_next, py_next, vx_next, vy_next])
