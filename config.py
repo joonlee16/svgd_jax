@@ -10,7 +10,7 @@ T = 30                       # horizon steps (time step=0.05)
 DIM_U = 2                    # dimension of control input u
 DT = 0.05                    # dt (s)
 R_col = 0.3                  # collision avoidance
-N = 10                        # Number of robots
+N = 10                       # Number of robots
      
 
 key = jax.random.PRNGKey(randint(0,10000)) 
