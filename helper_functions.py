@@ -2,13 +2,54 @@ import numpy as np
 import jax
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from config import *
+import jax.numpy as jnp
 from matplotlib.patches import Circle
 
+"""
+This module contains helper functions for visualization, animation,
+and initialization.
 
-'''
-Misc. helper functions, such as visualization and animations
-'''
+
+This module provides three helper functions:
+- generate_positions(N, min_dist, minval, maxval, key): generate N 2D positions
+    that are at least `min_dist` apart within the specified range.
+- animate_svgd(history, log_prob): animate a recorded SVGD particle history
+    over a 2D domain with an optional density contour.
+- animate_mpc(all_samples, best_trajs, goals, obstacles, radii): animate the multi-robot
+    sampled trajectories and best trajectories produced by the MPC loop.
+"""
+
+### Generate random positions between minval and maxval that are min_dist away from each other.
+def generate_positions(N, min_dist, minval, maxval, key):
+    """Generate N 2D positions that are at least `min_dist` apart.
+
+    Args:
+        N: number of positions to generate.
+        min_dist: minimum allowed pairwise distance between generated points.
+        minval, maxval: range for uniform sampling of coordinates.
+        key: JAX PRNGKey used for sampling.
+
+    Returns:
+        jnp.array of shape (N, 2) containing generated 2D positions.
+    """
+    positions = []
+    while len(positions) < N:
+        key, subkey = jax.random.split(key)
+
+        # generate a random candidate obstacle position
+        candidate = jax.random.uniform(subkey, (1, 2), minval=minval, maxval=maxval)
+
+        # check if it's at least min_dist away from existing positions
+        if positions:
+            # compute distance to all existing positions
+            dists = jnp.linalg.norm(jnp.vstack(positions) - candidate, axis=1)
+            if jnp.all(dists >= min_dist):
+                positions.append(candidate[0])
+        else:
+            # if far away from all existing positions, add it
+            positions.append(candidate[0])
+    return jnp.array(positions)
+
 
 # -------------------------
 # Animation Implementation
@@ -32,18 +73,11 @@ def animate_svgd(history, log_prob):
         ax.set_title(f"SVGD Step {frame*10}")
         return scat,
 
-    ani = animation.FuncAnimation(fig, update, frames=history.shape[0], interval=100, blit=True)
+    ani = animation.FuncAnimation(fig, update, frames=history.shape[0], interval=100, blit=False)
     plt.show()
 
 
-def animate_mpc(all_samples, best_trajs, goals):
-    """
-    all_samples: list of length TIME_ITER, each (S, N, T, 4)
-    best_trajs:  list of length TIME_ITER, each (N, T, 4)
-    goals: (N, 2)
-    obstacles: (M, 2) array-like or None
-    radii: (M,) array-like or None
-    """
+def animate_mpc(all_samples, best_trajs, goals, obstacles=[], radii=[]):
     fig, ax = plt.subplots()
     ax.set_xlim(-1, 13)
     ax.set_ylim(-1, 13)
@@ -88,6 +122,7 @@ def animate_mpc(all_samples, best_trajs, goals):
         return sum(sample_lines, []) + traj_lines + robot_dots + obstacle_patches
 
     ani = animation.FuncAnimation(fig, update, frames=len(all_samples),
-                                  interval=200, blit=True)
+                                  interval=200, blit=False)
+    ani.save('multi_robot_sim.gif', writer='imagemagick', fps=5)
     plt.legend()
     plt.show()

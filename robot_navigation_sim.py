@@ -6,12 +6,34 @@ from config import *
 from jax import jit
 import time
 
+"""
+Multi-robot SV-MPC demo script.
+
+This script demonstrates using SVGD to plan control sequences for multiple
+robots modeled as double-integrator agents in 2D. The main steps are:
+
+- construct a (negative) cost function for trajectories using `make_cost`,
+- run SVGD (`run_svgd`) to obtain a set of candidate control trajectories,
+- roll out the candidate trajectories and pick the best one to apply,
+- repeat for `TIME_ITER` iterations and animate the resulting paths.
+
+Run this file directly to launch the simulation: `python3 robot_navigation_sim.py`.
+"""
+
 # double integrator dynamics in 2D
 @jax.jit
-def double_integrator_rollout(x0,u, dt = DT):
+def double_integrator_rollout(x0, u, dt=DT):
+    """Roll out double-integrator dynamics for batched agents.
 
-    # jax.lax.scan: takes a function step_fn, initial point x0, and a sequence of u to loop over to 
-    # construct a trajectory over a squence of u
+    Args:
+        x0: array of shape (N, dim_state) containing initial states [px, py, vx, vy].
+        u: array of shape (N, T, dim_u) containing accelerations for each agent over T steps.
+        dt: time-step for integration.
+
+    Returns:
+        traj: array of shape (N, T, dim_state) containing the rolled-out states.
+    """
+
     @jax.jit
     def rollout_single(x0_i, u_i):
         @jax.jit
@@ -30,9 +52,18 @@ def double_integrator_rollout(x0,u, dt = DT):
 
     return jax.vmap(rollout_single)(x0, u)
 
-# Takes positions of all robots at time t, and comptues the collisions.
+
+# Takes positions of all robots at time t, and computes the collisions.
 @jit
 def inter_collision_penalty(pos_t):
+    """Compute a soft collision penalty between agents at a single timestep.
+
+    Args:
+        pos_t: array of shape (N, 2) containing agent positions at time t.
+
+    Returns:
+        penal: (N, N) array of pairwise collision penalties.
+    """
     diff = pos_t[:, None, :] - pos_t[None, :, :]              # (N, N, 2)
     dist = jnp.sqrt(jnp.sum(diff**2, axis=-1) + 1e-3)
     dist = dist + jnp.eye(N) * 1e6                     # mask self-distances
@@ -41,15 +72,25 @@ def inter_collision_penalty(pos_t):
                     2 * R_col - dist)
     return penal
 
+
 # Create a cost function with terminal cost.
-# Q: (4,) weight vector for state stage cost
-# R: (2*T,) weight vector for collision (both obstacle and inter-agent)
-# S: (2,) weight vector for terminal state cost
-# At the moment, I am only penalizing the norm of u and the final state's deviation to the goal
+def make_cost(Q, R, S, desired_terminal):
+    """Construct a negative-cost (log-probability) function for trajectories.
 
+    The returned function accepts a flattened control vector `u` and an initial
+    state `x0`, rolls out the dynamics, computes stage costs (velocity penalties,
+    obstacle and inter-agent penalties) and a terminal cost, and returns the
+    negative total cost (so it behaves like a log-probability to be maximized).
 
-###### Need to make x0 such that it goes inside the function
-def make_cost(Q,R,S, desired_terminal):
+    Args:
+        Q: (4,) weight vector for state stage cost
+        R: (2*T,) weight vector for collision (both obstacle and inter-agent)
+        S: (2,) weight vector for terminal state cost        
+        desired_terminal: array of desired goal positions used for the terminal cost.
+
+    Returns:
+        cost_fn(u, x0): callable that computes a scalar negative-cost for a control `u`.
+    """
 
 
     def cost_fn(u, x0):
@@ -66,7 +107,7 @@ def make_cost(Q,R,S, desired_terminal):
         dists = jnp.linalg.norm(diffs, axis=-1)  # shape (T*N, num_obstacles)
 
         # compute penalties for obstacle collisions
-        obs_col_penal = jnp.where(dists < radii+padding,R*(radii+padding - dists),radii+padding-dists)     # (T*N, num_obstacles)
+        obs_col_penal = jnp.where(dists < radii+padding,R*(radii+padding - dists),radii+padding-dists)     # shape (T*N, num_obstacles)
 
         # compute penalities for inter-agent collisions:
         inter_col_penal = jnp.sum(jax.vmap(inter_collision_penalty, in_axes = 1)(traj[:, :, :2]))
@@ -91,6 +132,7 @@ if __name__ == "__main__" or __name__ == "resilient_motion_discrete":
     log_prob = make_cost(Q, R, S, x_goal)
     cost_function = jax.jit(lambda u, v: log_prob(u, v))
     from svgd import run_svgd
+
     # with jax.log_compiles():
     for t in range(TIME_ITER):
         init_time = time.time()
@@ -114,7 +156,7 @@ if __name__ == "__main__" or __name__ == "resilient_motion_discrete":
         state = best_traj[:,1]
 
         time_history.append(time.time()-init_time)
-    animate_mpc(all_samples, best_trajs, x_goal)
+    animate_mpc(all_samples, best_trajs, x_goal, obstacles, radii)
 
     print("max comp time", max(time_history[1:]))
     print("average comp time", sum(time_history[1:])/(TIME_ITER-1))

@@ -1,7 +1,16 @@
 import jax.numpy as jnp
 import jax
 """
-Implementations of different kernel functions
+Kernel implementations used by SVGD.
+
+This module provides helper kernels and bandwidth heuristics used to
+construct the Stein variational gradient. The public functions are:
+
+- `sq_dists(theta)`: pairwise squared distances between rows of `theta`.
+- `median_heur(theta_i)`: median heuristic for RBF bandwidth selection.
+- `rbf_kernal(theta)`: RBF kernel matrix and its gradient w.r.t. inputs.
+
+All functions are JIT-compiled with JAX for speed.
 """
 
 # Helper function: compute the squared of matrices
