@@ -13,13 +13,26 @@ Core SVGD drivers used in the project. This module implements the main SVGD upda
 - run_svgd: a general SVGD update algorithm.
 - run_svgd_with_history: a SVGD runner that records intermediate
     particle states (useful for visualization / debugging).
+
+Important implementation note:
+--------------------------------
+For both functions, particles are sampled independently at each call.
+That is, no warm start is performed using solutions from previous MPC
+iterations. Each function call is treated as a fresh optimization / inference
+problem with newly sampled particles.
+
+While warm starting is commonly used in practical SV-MPC implementations
+to accelerate convergence, JAX’s JIT compilation and vmap allows still fast 
+cold-started SVGD runs at each MPC step without significant overhead. 
+By not doing warm starting, we can get a greater particle diversity 
+and avoid potential local minima issue.
 """
 
 # -------------------------
 # SVGD Update Implementation
 # -------------------------
 @partial(jit, static_argnums=(0,3,4,5,6))
-def run_svgd(log_p, state, key, n_particles, T, dim_u, n_steps=50, lr=1e-3):
+def run_svgd(log_p, theta_init, key, n_particles, T, dim_u, n_steps=50, lr=1e-3):
     """Run SVGD to optimize batched control trajectories.
 
     This function treats each particle as a full control sequence for `N`
@@ -29,7 +42,7 @@ def run_svgd(log_p, state, key, n_particles, T, dim_u, n_steps=50, lr=1e-3):
     Args:
         log_p: callable (u_flat, state) -> scalar log-probability (or negative cost).
         state: current environment/state passed into `log_p`.
-        key: JAX PRNGKey for initialization.
+        theta_init: Initial particle set of shape (n_particles, N, T, dim_u).
         n_particles: number of particles/samples.
         T: trajectory horizon length.
         dim_u: dimensionality of control per time-step.
@@ -42,7 +55,6 @@ def run_svgd(log_p, state, key, n_particles, T, dim_u, n_steps=50, lr=1e-3):
 
     # Compute the log p and the initial samples
     grad_log_p = grad(lambda u: log_p(u, state))
-    theta_init = jax.random.normal(key, (n_particles, N, T, dim_u)) * 5.0
 
     @jax.jit
     def svgd_step(theta, lr):

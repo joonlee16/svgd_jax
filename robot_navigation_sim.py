@@ -143,11 +143,11 @@ if __name__ == "__main__" or __name__ == "resilient_motion_discrete":
         theta_final = run_svgd(cost_function, state, key, NUM_PARTICLE, T, DIM_U, n_steps=SVGD_ITER, lr=0.05)
 
         # Roll out all sampled trajectories
-        sample_trajs = jax.vmap(lambda u: double_integrator_rollout(state, u.reshape(N, T, DIM_U)))(theta_final)
+        sample_trajs = jax.vmap(lambda u: double_integrator_rollout(state, u.reshape(N, T, DIM_U)))(theta_final)  # shape (NUM_PARTICLE, N, T, state_dim)
         all_samples.append(sample_trajs)
 
         # Pick best trajectory
-        costs = jax.vmap(lambda u: cost_function(u, state))(theta_final)
+        costs = jax.vmap(lambda u: cost_function(u, state))(theta_final)  # shape (NUM_PARTICLE,)
         best_idx = jnp.argmax(costs)
         best_traj = sample_trajs[best_idx]
         best_trajs.append(best_traj)

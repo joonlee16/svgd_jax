@@ -123,6 +123,5 @@ def animate_mpc(all_samples, best_trajs, goals, obstacles=[], radii=[]):
 
     ani = animation.FuncAnimation(fig, update, frames=len(all_samples),
                                   interval=200, blit=False)
-    ani.save('multi_robot_sim.gif', writer='imagemagick', fps=5)
     plt.legend()
     plt.show()
