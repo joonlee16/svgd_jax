@@ -4,7 +4,7 @@ import jax
 from helper_functions import generate_positions
 
 TIME_ITER = 60              # Robot simulation iterations
-SVGD_ITER = 50               # SVGD iterations
+SVGD_ITER = 30               # SVGD iterations
 NUM_PARTICLE = 100           # number of samples
 T = 30                       # horizon steps (time step=0.05)
 DIM_U = 2                    # dimension of control input u

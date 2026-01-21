@@ -32,7 +32,7 @@ and avoid potential local minima issue.
 # SVGD Update Implementation
 # -------------------------
 @partial(jit, static_argnums=(0,3,4,5,6))
-def run_svgd(log_p, theta_init, key, n_particles, T, dim_u, n_steps=50, lr=1e-3):
+def run_svgd(log_p, state, key, n_particles, T, dim_u, n_steps=50, lr=1e-3):
     """Run SVGD to optimize batched control trajectories.
 
     This function treats each particle as a full control sequence for `N`
@@ -55,6 +55,8 @@ def run_svgd(log_p, theta_init, key, n_particles, T, dim_u, n_steps=50, lr=1e-3)
 
     # Compute the log p and the initial samples
     grad_log_p = grad(lambda u: log_p(u, state))
+    theta_init = jax.random.normal(key, (n_particles, N, T, dim_u)) * 5.0
+
 
     @jax.jit
     def svgd_step(theta, lr):
